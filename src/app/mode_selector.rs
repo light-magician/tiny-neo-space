@@ -1,16 +1,20 @@
 use macroquad::math::Vec2;
 
-use super::{dragging::perform_dragging, drawing::perform_drawing, state::ApplicationState};
+use super::{drawing::perform_drawing, state::ApplicationState, canvas_renderer::CanvasRenderer};
 
 #[derive(PartialEq)]
 pub(crate) enum Mode {
-    Draw,
-    Grab,
+    Paint,
+    Erase,
 }
 
-pub fn perform_action_based_on_application_state(state: &mut ApplicationState, mouse_pos: &Vec2) {
+pub fn perform_action_based_on_application_state(
+    state: &mut ApplicationState,
+    mouse_pos: &Vec2,
+    canvas_renderer: &mut CanvasRenderer,
+) {
     match state.mode {
-        Mode::Draw => perform_drawing(state, mouse_pos),
-        Mode::Grab => perform_dragging(state, mouse_pos)
+        Mode::Paint => perform_drawing(state, mouse_pos, false, canvas_renderer),
+        Mode::Erase => perform_drawing(state, mouse_pos, true, canvas_renderer),
     }
 } 

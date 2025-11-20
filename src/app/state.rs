@@ -1,27 +1,21 @@
 use macroquad::prelude::*;
 
-use super::{mode_selector::Mode, screen_object::Stroke};
+use super::{mode_selector::Mode, cell::CellGrid};
 
 pub struct ApplicationState {
-   pub mode: Mode,
-    pub last_mouse_position: Option<Vec2>,
-    pub strokes: Vec<Stroke>,
-    pub current_stroke: Option<Stroke>,
-    pub mesh: Option<Mesh>,
-    pub highlighted: Option<usize>,
-    pub cursor_size: f32
+    pub mode: Mode,
+    pub show_palette: bool,
+    pub current_color: Color,
+    pub cells: CellGrid,
 }
 
 impl ApplicationState {
     pub fn new() -> Self {
         ApplicationState {
-            mode: Mode::Draw,
-            last_mouse_position: None,
-            strokes: Vec::new(),
-            current_stroke: None,
-            highlighted: None,
-            cursor_size: 10.0,
-            mesh: None,
+            mode: Mode::Paint,
+            show_palette: false,
+            current_color: BLUE,
+            cells: CellGrid::new(),
         }
     }
 }
