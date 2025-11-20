@@ -23,6 +23,6 @@ impl Hud {
 
     pub fn draw(&self) {
         let fps_text = format!("FPS: {}", self.fps);
-        draw_text(&fps_text, 10.0, screen_height() - 30.0, 20.0, WHITE);
+        draw_text(&fps_text, 10.0, screen_height() - 30.0, 20.0, BLACK);
     }
 }

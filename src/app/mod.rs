@@ -7,6 +7,7 @@ mod mode_selector;
 mod state;
 mod dragging;
 mod screen_object;
+mod grid;
 
 use macroquad::prelude::*;
 
@@ -15,12 +16,18 @@ pub use self::state::ApplicationState;
 pub async fn run() {
     let mut state = ApplicationState::new();
     let mut hud = hud::Hud::new();
+    let mut grid_renderer = grid::GridRenderer::new();
 
     loop {
         let dt = get_frame_time();
         hud.update(dt);
 
-        clear_background(LIGHTGRAY);
+        // White background
+        clear_background(WHITE);
+
+        // Ensure and draw cached grid overlay
+        grid_renderer.update_if_needed();
+        grid_renderer.draw();
         buttons::render_ui_buttons(&mut state);
 
         let mouse_pos = Vec2::from(mouse_position());
