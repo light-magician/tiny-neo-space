@@ -2,31 +2,18 @@ use macroquad::prelude::*;
 use std::collections::HashSet;
 
 use crate::core::*;
-use crate::core::GRID_SIZE;
+use crate::core::camera::Camera as AppCamera;
 
-/// Optimized canvas renderer using render target with dirty cell tracking
-/// Only redraws cells that have changed since last frame
+/// Optimized canvas renderer with frustum culling
+/// Renders cells directly to screen using camera transforms
 pub struct CanvasRenderer {
-    render_target: RenderTarget,
-    width: u32,
-    height: u32,
     dirty_cells: HashSet<(i32, i32)>,
-    needs_full_redraw: bool,
 }
 
 impl CanvasRenderer {
     pub fn new() -> Self {
-        let width = screen_width().max(1.0) as u32;
-        let height = screen_height().max(1.0) as u32;
-        let rt = render_target(width, height);
-        rt.texture.set_filter(FilterMode::Nearest); // Crisp pixel-perfect rendering
-
         CanvasRenderer {
-            render_target: rt,
-            width,
-            height,
             dirty_cells: HashSet::new(),
-            needs_full_redraw: true,
         }
     }
 
@@ -35,104 +22,36 @@ impl CanvasRenderer {
         self.dirty_cells.insert(cell_coords);
     }
 
-    /// Check if screen size changed and recreate render target if needed
+    /// Check if screen size changed (no longer needed but kept for compatibility)
     pub fn update_if_screen_resized(&mut self) {
-        let sw = screen_width().max(1.0) as u32;
-        let sh = screen_height().max(1.0) as u32;
-
-        if sw != self.width || sh != self.height {
-            self.width = sw;
-            self.height = sh;
-            self.render_target = render_target(sw, sh);
-            self.render_target.texture.set_filter(FilterMode::Nearest);
-            self.needs_full_redraw = true;
-        }
+        // No longer needed since we're rendering directly
     }
 
-    /// Update the render target by redrawing only dirty cells
-    pub fn update(&mut self, cells: &CellGrid) {
-        if self.needs_full_redraw || !self.dirty_cells.is_empty() {
-            // Always do full redraw when there are changes
-            // This ensures erased cells are properly cleared
-            self.full_redraw(cells);
-            self.needs_full_redraw = false;
-            self.dirty_cells.clear();
-        }
+    /// Update (no longer needed but kept for compatibility)
+    pub fn update(&mut self, _cells: &CellGrid) {
+        self.dirty_cells.clear();
     }
 
-    /// Redraw all cells (used on initialization or screen resize)
-    fn full_redraw(&self, cells: &CellGrid) {
-        set_camera(&Camera2D {
-            render_target: Some(self.render_target.clone()),
-            ..Camera2D::from_display_rect(Rect::new(0.0, 0.0, self.width as f32, self.height as f32))
-        });
+    /// Draw all visible cells to screen with frustum culling
+    pub fn draw(&self, cells: &CellGrid, camera: &AppCamera) {
+        let screen_w = screen_width();
+        let screen_h = screen_height();
 
-        // Clear to transparent (white background from main loop will show through)
-        clear_background(BLANK);
+        let (min_x, min_y, max_x, max_y) = camera.visible_world_rect(screen_w, screen_h);
+        let pixel_scale = camera.pixel_scale();
 
-        // Draw all cells
-        for (coords, cell) in cells {
+        // Only draw cells within visible area
+        for (coords, cell) in cells.iter() {
             if cell.is_filled {
-                self.draw_cell_at_coords(*coords, cell.color);
-            }
-        }
+                let cell_x = coords.0 as f32;
+                let cell_y = coords.1 as f32;
 
-        set_default_camera();
-    }
-
-    /// Redraw only dirty cells
-    #[allow(dead_code)]
-    fn partial_redraw(&self, cells: &CellGrid) {
-        set_camera(&Camera2D {
-            render_target: Some(self.render_target.clone()),
-            ..Camera2D::from_display_rect(Rect::new(0.0, 0.0, self.width as f32, self.height as f32))
-        });
-
-        for coords in &self.dirty_cells {
-            let x = coords.0 as f32 * GRID_SIZE;
-            let y = coords.1 as f32 * GRID_SIZE;
-
-            // Clear the cell area
-            draw_rectangle(x, y, GRID_SIZE, GRID_SIZE, BLANK);
-
-            // Redraw if cell exists and is filled
-            if let Some(cell) = cells.get(coords) {
-                if cell.is_filled {
-                    self.draw_cell_at_coords(*coords, cell.color);
+                // Frustum culling
+                if cell_x >= min_x && cell_x <= max_x && cell_y >= min_y && cell_y <= max_y {
+                    let screen_pos = camera.cell_to_screen(*coords);
+                    draw_rectangle(screen_pos.x, screen_pos.y, pixel_scale, pixel_scale, cell.color);
                 }
             }
         }
-
-        set_default_camera();
-    }
-
-    /// Draw a single cell at the given grid coordinates
-    /// Cells are drawn perfectly within grid squares (not overlapping grid lines)
-    fn draw_cell_at_coords(&self, coords: (i32, i32), color: Color) {
-        let x = coords.0 as f32 * GRID_SIZE;
-        let y = coords.1 as f32 * GRID_SIZE;
-
-        // Draw rectangle that fits perfectly within the grid cell
-        // No overlap with grid lines
-        draw_rectangle(x, y, GRID_SIZE, GRID_SIZE, color);
-    }
-
-    /// Draw the render target to the screen with camera offset
-    pub fn draw(&self, _cells: &CellGrid, camera_offset: Vec2) {
-        // Calculate which portion of the render target to show based on camera
-        let source_rect = Rect::new(
-            camera_offset.x,
-            camera_offset.y,
-            screen_width().min(self.width as f32 - camera_offset.x),
-            screen_height().min(self.height as f32 - camera_offset.y),
-        );
-
-        let params = DrawTextureParams {
-            source: Some(source_rect),
-            dest_size: Some(vec2(source_rect.w, source_rect.h)),
-            flip_y: true,  // Render targets are Y-flipped in OpenGL
-            ..Default::default()
-        };
-        draw_texture_ex(&self.render_target.texture, 0.0, 0.0, WHITE, params);
     }
 }

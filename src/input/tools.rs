@@ -36,20 +36,14 @@ fn set_cell(
 /// Handle mouse input for painting or erasing
 pub fn perform_drawing(
     state: &mut ApplicationState,
-    mouse_pos: &Vec2,
+    mouse_world: &Vec2,
     is_erasing: bool,
     canvas_renderer: &mut CanvasRenderer,
 ) {
-    // Check if mouse is within screen bounds
-    if mouse_pos.x < 0.0 || mouse_pos.y < 0.0 ||
-       mouse_pos.x >= screen_width() || mouse_pos.y >= screen_height() {
-        return;
-    }
-
     // Only respond to mouse button down
     if is_mouse_button_down(MouseButton::Left) {
-        // Calculate which cell the mouse is over
-        let cell_coords = grid_position_to_cell_coords(mouse_pos, GRID_SIZE);
+        // Calculate which cell the mouse is over (floor to get cell indices)
+        let cell_coords = (mouse_world.x.floor() as i32, mouse_world.y.floor() as i32);
 
         // Set cell state: Some(Cell) for paint, None for erase
         let new_cell = if is_erasing {

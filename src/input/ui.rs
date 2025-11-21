@@ -22,7 +22,13 @@ pub fn render_ui_buttons(state: &mut ApplicationState) {
     if draw_button("Erase", 100.0, 10.0, 80.0, 30.0, state.mode == Mode::Erase) {
         state.mode = Mode::Erase;
     }
-    if draw_button("Palette", 190.0, 10.0, 80.0, 30.0, state.show_palette) {
+    if draw_button("Pan", 190.0, 10.0, 80.0, 30.0, state.mode == Mode::Pan) {
+        state.mode = Mode::Pan;
+    }
+    if draw_button("Select", 280.0, 10.0, 80.0, 30.0, state.mode == Mode::Select) {
+        state.mode = Mode::Select;
+    }
+    if draw_button("Palette", 370.0, 10.0, 80.0, 30.0, state.show_palette) {
         state.show_palette = !state.show_palette;
     }
 
