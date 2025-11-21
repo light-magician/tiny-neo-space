@@ -1,9 +1,7 @@
 use macroquad::prelude::*;
-use super::state::ApplicationState;
-use super::cell::{Cell, grid_position_to_cell_coords};
-use super::canvas_renderer::CanvasRenderer;
-
-const GRID_SIZE: f32 = 10.0;
+use crate::state::ApplicationState;
+use crate::core::*;
+use crate::rendering::CanvasRenderer;
 
 /// Set a cell to a specific color or clear it (None = erase)
 /// This is the unified abstraction for both painting and erasing

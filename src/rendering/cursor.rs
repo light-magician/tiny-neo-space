@@ -1,9 +1,7 @@
 use macroquad::prelude::*;
 
-use super::mode_selector::Mode;
-use super::cell::grid_position_to_cell_coords;
-
-const GRID_SIZE: f32 = 10.0;
+use crate::state::Mode;
+use crate::core::{grid_position_to_cell_coords, GRID_SIZE};
 
 pub fn draw_cursor_based_on_mode(mode: &Mode, mouse_pos: Vec2) {
     // Highlight the cell that will be painted/erased

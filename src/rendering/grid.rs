@@ -1,4 +1,5 @@
 use macroquad::prelude::*;
+use crate::core::*;
 
 pub struct GridRenderer {
     rt: RenderTarget,
@@ -20,9 +21,9 @@ impl GridRenderer {
             rt,
             width,
             height,
-            spacing: 10.0,
-            color: Color::from_rgba(210, 225, 255, 255), // light blue lines on white
-            thickness: 1.0,
+            spacing: GRID_SIZE,
+            color: grid_color(),
+            thickness: GRID_THICKNESS,
         };
 
         grid.redraw();
@@ -77,12 +78,27 @@ impl GridRenderer {
         }
     }
 
-    pub fn draw(&self) {
-        // Draw the pre-rendered grid texture to fill the screen
-        let params = DrawTextureParams {
-            dest_size: Some(vec2(self.width as f32, self.height as f32)),
-            ..Default::default()
-        };
-        draw_texture_ex(&self.rt.texture, 0.0, 0.0, WHITE, params);
+    pub fn draw(&self, camera_offset: Vec2) {
+        // Calculate which part of the infinite grid to show based on camera
+        let offset_x = -(camera_offset.x % self.spacing);
+        let offset_y = -(camera_offset.y % self.spacing);
+
+        // Draw grid lines directly (no render target needed for infinite grid)
+        let w = screen_width();
+        let h = screen_height();
+
+        // Vertical lines
+        let mut x = offset_x;
+        while x <= w {
+            draw_line(x, 0.0, x, h, self.thickness, self.color);
+            x += self.spacing;
+        }
+
+        // Horizontal lines
+        let mut y = offset_y;
+        while y <= h {
+            draw_line(0.0, y, w, y, self.thickness, self.color);
+            y += self.spacing;
+        }
     }
 }

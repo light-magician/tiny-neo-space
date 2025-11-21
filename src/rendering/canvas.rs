@@ -1,9 +1,8 @@
 use macroquad::prelude::*;
 use std::collections::HashSet;
 
-use super::cell::CellGrid;
-
-const GRID_SIZE: f32 = 10.0;
+use crate::core::*;
+use crate::core::GRID_SIZE;
 
 /// Optimized canvas renderer using render target with dirty cell tracking
 /// Only redraws cells that have changed since last frame
@@ -82,6 +81,7 @@ impl CanvasRenderer {
     }
 
     /// Redraw only dirty cells
+    #[allow(dead_code)]
     fn partial_redraw(&self, cells: &CellGrid) {
         set_camera(&Camera2D {
             render_target: Some(self.render_target.clone()),
@@ -117,10 +117,19 @@ impl CanvasRenderer {
         draw_rectangle(x, y, GRID_SIZE, GRID_SIZE, color);
     }
 
-    /// Draw the render target to the screen
-    pub fn draw(&self) {
+    /// Draw the render target to the screen with camera offset
+    pub fn draw(&self, _cells: &CellGrid, camera_offset: Vec2) {
+        // Calculate which portion of the render target to show based on camera
+        let source_rect = Rect::new(
+            camera_offset.x,
+            camera_offset.y,
+            screen_width().min(self.width as f32 - camera_offset.x),
+            screen_height().min(self.height as f32 - camera_offset.y),
+        );
+
         let params = DrawTextureParams {
-            dest_size: Some(vec2(self.width as f32, self.height as f32)),
+            source: Some(source_rect),
+            dest_size: Some(vec2(source_rect.w, source_rect.h)),
             flip_y: true,  // Render targets are Y-flipped in OpenGL
             ..Default::default()
         };
