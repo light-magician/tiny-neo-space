@@ -1,4 +1,5 @@
 use crate::core::cell::CellGrid;
+use macroquad::prelude::RenderTarget;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SelectionRect {
@@ -40,6 +41,7 @@ pub enum SelectionKind {
 pub struct Selection {
     pub rect: SelectionRect,
     pub kind: SelectionKind,
+    pub preview: Option<RenderTarget>,
 }
 
 /// Main selection state tracking
@@ -130,6 +132,7 @@ impl SelectionState {
             self.current = Some(Selection {
                 rect,
                 kind: SelectionKind::Cells(selected_cells),
+                preview: None,
             });
             return true;
         }

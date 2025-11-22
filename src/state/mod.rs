@@ -47,6 +47,8 @@ pub struct ApplicationState {
     pub pan_drag_start_origin: Option<Vec2>,
     /// Selection system state
     pub selection: SelectionState,
+    /// Last painted cell coordinates for stroke interpolation
+    pub last_painted_cell: Option<(i32, i32)>,
 }
 
 impl ApplicationState {
@@ -64,6 +66,7 @@ impl ApplicationState {
             pan_drag_start_screen: None,
             pan_drag_start_origin: None,
             selection: SelectionState::new(),
+            last_painted_cell: None,
         }
     }
 }

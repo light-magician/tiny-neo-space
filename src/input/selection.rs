@@ -11,6 +11,15 @@ pub fn handle_select_tool(state: &mut ApplicationState) {
     if is_mouse_button_pressed(MouseButton::Left) {
         if state.selection.contains_point(cell_coords.0, cell_coords.1) {
             // Click inside selection → start move
+            // Ensure preview exists before moving
+            if let Some(sel) = &mut state.selection.current {
+                if sel.preview.is_none() {
+                    sel.preview = crate::rendering::selection::build_selection_preview(
+                        &state.cells,
+                        &sel.rect
+                    );
+                }
+            }
             state.selection.start_move((world_mouse_pos.x, world_mouse_pos.y));
         } else {
             // Click outside → start new selection drag
@@ -41,12 +50,20 @@ pub fn handle_select_tool(state: &mut ApplicationState) {
             }
         } else if state.selection.active_drag {
             state.selection.finalize_drag(&state.cells);
+
+            // Build preview for the new selection
+            if let Some(sel) = &mut state.selection.current {
+                sel.preview = crate::rendering::selection::build_selection_preview(
+                    &state.cells,
+                    &sel.rect
+                );
+            }
         }
     }
 }
 
 fn apply_selection_move(state: &mut ApplicationState, offset_x: i32, offset_y: i32) {
-    if let Some(sel) = &state.selection.current {
+    if let Some(sel) = &mut state.selection.current {
         if let SelectionKind::Cells(coords) = &sel.kind {
             // Collect old cell data
             let mut cell_data = Vec::new();
@@ -62,6 +79,9 @@ fn apply_selection_move(state: &mut ApplicationState, offset_x: i32, offset_y: i
                 state.cells.insert(new_coord, cell);
             }
         }
+
+        // Invalidate preview - it will be rebuilt next time if needed
+        sel.preview = None;
     }
 }
 

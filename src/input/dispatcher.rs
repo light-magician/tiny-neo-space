@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use crate::state::{Mode, ApplicationState};
 use crate::rendering::CanvasRenderer;
+use crate::core::selection::SelectionKind;
 use super::tools::perform_drawing;
 use super::selection::handle_select_tool;
 
@@ -9,6 +10,26 @@ pub fn handle_input(
     state: &mut ApplicationState,
     canvas_renderer: &mut CanvasRenderer,
 ) {
+    // Hotkeys for mode switching (check before mode dispatch)
+    if is_key_pressed(KeyCode::B) {
+        state.mode = Mode::Paint;
+    }
+    if is_key_pressed(KeyCode::E) {
+        state.mode = Mode::Erase;
+    }
+    if is_key_pressed(KeyCode::V) {
+        state.mode = Mode::Select;
+    }
+    if is_key_pressed(KeyCode::H) || is_key_pressed(KeyCode::Space) {
+        state.mode = Mode::Pan;
+    }
+
+    // Delete selection hotkey
+    if is_key_pressed(KeyCode::Delete) || is_key_pressed(KeyCode::Backspace) {
+        delete_selection(state, canvas_renderer);
+    }
+
+    // Existing mode-based dispatch
     let screen_mouse_pos = Vec2::from(mouse_position());
     let world_mouse_pos = state.camera.screen_to_cell(screen_mouse_pos);
 
@@ -17,6 +38,23 @@ pub fn handle_input(
         Mode::Erase => perform_drawing(state, &world_mouse_pos, true, canvas_renderer),
         Mode::Pan => handle_pan_tool(state, screen_mouse_pos),
         Mode::Select => handle_select_tool(state),
+    }
+}
+
+/// Delete the current selection
+fn delete_selection(state: &mut ApplicationState, canvas_renderer: &mut CanvasRenderer) {
+    if let Some(sel) = &state.selection.current {
+        if let SelectionKind::Cells(coords) = &sel.kind {
+            // Remove all cells in the selection
+            for &(x, y) in coords.iter() {
+                if state.cells.remove(&(x, y)).is_some() {
+                    canvas_renderer.mark_dirty((x, y));
+                }
+            }
+        }
+        // Clear the selection after deleting
+        state.selection.current = None;
+        state.selection.is_moving = false;
     }
 }
 

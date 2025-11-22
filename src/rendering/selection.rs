@@ -2,6 +2,8 @@ use macroquad::prelude::*;
 use crate::state::ApplicationState;
 use crate::core::camera::Camera as AppCamera;
 use crate::input::delete_selection;
+use crate::core::cell::CellGrid;
+use crate::core::selection::SelectionRect;
 
 pub fn draw_selection_overlay(state: &ApplicationState) {
     let camera = &state.camera;
@@ -34,6 +36,25 @@ pub fn draw_selection_overlay(state: &ApplicationState) {
             let offset_px_x = state.selection.move_offset_x * pixel_scale;
             let offset_px_y = state.selection.move_offset_y * pixel_scale;
 
+            // If we have a preview texture, draw it
+            if let Some(preview) = &sel.preview {
+                let width = (sel.rect.max_x - sel.rect.min_x + 1) as f32 * pixel_scale;
+                let height = (sel.rect.max_y - sel.rect.min_y + 1) as f32 * pixel_scale;
+
+                // Draw the preview texture at the offset position
+                draw_texture_ex(
+                    &preview.texture,
+                    min_screen.x + offset_px_x,
+                    min_screen.y + offset_px_y,
+                    WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(vec2(width, height)),
+                        ..Default::default()
+                    }
+                );
+            }
+
+            // Still draw the yellow outline for the target position
             draw_rectangle_lines(
                 min_screen.x + offset_px_x,
                 min_screen.y + offset_px_y,
@@ -119,4 +140,53 @@ fn draw_action_button(label: &str, x: f32, y: f32, w: f32, h: f32) -> bool {
     draw_text(label, text_x, text_y, 14.0, WHITE);
 
     is_mouse_button_pressed(MouseButton::Left) && is_hovered
+}
+
+/// Build a RenderTarget preview of the selected cells
+pub fn build_selection_preview(
+    cells: &CellGrid,
+    rect: &SelectionRect,
+) -> Option<RenderTarget> {
+    let width = (rect.max_x - rect.min_x + 1) as u32;
+    let height = (rect.max_y - rect.min_y + 1) as u32;
+
+    if width == 0 || height == 0 {
+        return None;
+    }
+
+    // Create RenderTarget sized to the selection rectangle
+    // Use a reasonable cell size for the preview (e.g., 8px per cell)
+    let cell_size = 8;
+    let rt = render_target(width * cell_size, height * cell_size);
+    rt.texture.set_filter(FilterMode::Nearest);
+
+    // Render selected cells into the texture using a camera that renders to the RenderTarget
+    let camera = Camera2D {
+        render_target: Some(rt.clone()),
+        zoom: vec2(2.0 / (width as f32 * cell_size as f32),
+                   -2.0 / (height as f32 * cell_size as f32)),
+        target: vec2((width as f32 * cell_size as f32) / 2.0,
+                     (height as f32 * cell_size as f32) / 2.0),
+        ..Default::default()
+    };
+
+    set_camera(&camera);
+    clear_background(Color::new(0.0, 0.0, 0.0, 0.0)); // Transparent
+
+    // Draw all cells in the selection
+    for x in rect.min_x..=rect.max_x {
+        for y in rect.min_y..=rect.max_y {
+            if let Some(cell) = cells.get(&(x, y)) {
+                if cell.is_filled {
+                    let local_x = (x - rect.min_x) as f32 * cell_size as f32;
+                    let local_y = (y - rect.min_y) as f32 * cell_size as f32;
+                    draw_rectangle(local_x, local_y, cell_size as f32, cell_size as f32, cell.color);
+                }
+            }
+        }
+    }
+
+    set_default_camera();
+
+    Some(rt)
 }

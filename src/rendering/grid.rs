@@ -1,6 +1,22 @@
 use macroquad::prelude::*;
 use crate::core::camera::Camera as AppCamera;
 
+/// Compute LOD level and blend factor from zoom
+fn compute_lod(zoom: f32) -> (i32, f32) {
+    let step_smooth = 1.0 / zoom;        // doubles when zoom halves
+    let lod_f = step_smooth.log2();      // 0 @ 1.0x, 1 @ 0.5x, 2 @ 0.25x
+    let lod = lod_f.floor().max(0.0) as i32;
+    let blend = (lod_f - lod as f32).clamp(0.0, 1.0);
+    let step = 1 << lod;                 // 2^lod
+    (step, blend)
+}
+
+/// Snap to pixel center for crisp lines
+#[inline]
+fn snap_px(v: f32) -> f32 {
+    v.round() + 0.5
+}
+
 pub struct GridRenderer {}
 
 impl GridRenderer {
@@ -15,75 +31,88 @@ impl GridRenderer {
     pub fn draw(&self, camera: &AppCamera) {
         let screen_w = screen_width();
         let screen_h = screen_height();
-
         let (min_x, min_y, max_x, max_y) = camera.visible_world_rect(screen_w, screen_h);
 
-        let cell_px = camera.pixel_scale();
-        let step_cells = grid_step_cells(cell_px);
+        // Compute LOD step and fade factor
+        let (step, blend) = compute_lod(camera.zoom);
 
-        // Align start/end to grid step
-        let start_x = (min_x.floor() as i32 / step_cells) * step_cells;
-        let start_y = (min_y.floor() as i32 / step_cells) * step_cells;
-        let end_x = (max_x.ceil() as i32 / step_cells + 1) * step_cells;
-        let end_y = (max_y.ceil() as i32 / step_cells + 1) * step_cells;
+        // Compute start/end aligned to step using Euclidean division (correct for negatives)
+        let start_x = (min_x.floor() as i32).div_euclid(step) * step;
+        let start_y = (min_y.floor() as i32).div_euclid(step) * step;
+        let end_x   = (max_x.ceil()  as i32).div_euclid(step) * step + step;
+        let end_y   = (max_y.ceil()  as i32).div_euclid(step) * step + step;
 
-        let (line_color, line_thickness) = get_grid_appearance(step_cells);
+        let thickness = 1.0; // screen-space pixels
+        let base = Color::new(0.70, 0.75, 0.85, 0.45);
 
         // Draw vertical lines
         let mut x = start_x;
         while x <= end_x {
-            let p0 = camera.cell_to_screen((x, start_y));
-            let p1 = camera.cell_to_screen((x, end_y));
+            if x % step != 0 {
+                x += 1;
+                continue;
+            }
 
-            // Make tile boundaries (every 16 cells) slightly more prominent
-            let is_tile_boundary = x % 16 == 0;
-            let thickness = if is_tile_boundary && step_cells > 1 { line_thickness + 0.3 } else { line_thickness };
-            let color = if is_tile_boundary && step_cells > 1 {
-                Color::new(line_color.r * 0.8, line_color.g * 0.8, line_color.b * 0.8, line_color.a * 1.2)
+            // Determine if this line survives to the next LOD level
+            let survives_next = (x % (step * 2)) == 0;
+            let mut alpha_mul = if survives_next {
+                1.0
             } else {
-                line_color
+                1.0 - blend
             };
 
-            draw_line(p0.x, p0.y, p1.x, p1.y, thickness, color);
-            x += step_cells;
+            // Emphasize tile boundaries (every 16 cells)
+            let is_tile = (x % 16) == 0;
+            if is_tile {
+                alpha_mul = (alpha_mul * 1.15).min(1.0);
+            }
+
+            // Only draw if visible
+            if alpha_mul > 0.001 {
+                let p0 = camera.cell_to_screen((x, start_y));
+                let p1 = camera.cell_to_screen((x, end_y));
+                let col = Color::new(base.r, base.g, base.b, base.a * alpha_mul);
+                draw_line(
+                    snap_px(p0.x), snap_px(p0.y),
+                    snap_px(p1.x), snap_px(p1.y),
+                    thickness, col
+                );
+            }
+            x += step;
         }
 
-        // Draw horizontal lines
+        // Draw horizontal lines (mirror of vertical)
         let mut y = start_y;
         while y <= end_y {
-            let p0 = camera.cell_to_screen((start_x, y));
-            let p1 = camera.cell_to_screen((end_x, y));
+            if y % step != 0 {
+                y += 1;
+                continue;
+            }
 
-            // Make tile boundaries (every 16 cells) slightly more prominent
-            let is_tile_boundary = y % 16 == 0;
-            let thickness = if is_tile_boundary && step_cells > 1 { line_thickness + 0.3 } else { line_thickness };
-            let color = if is_tile_boundary && step_cells > 1 {
-                Color::new(line_color.r * 0.8, line_color.g * 0.8, line_color.b * 0.8, line_color.a * 1.2)
+            let survives_next = (y % (step * 2)) == 0;
+            let mut alpha_mul = if survives_next {
+                1.0
             } else {
-                line_color
+                1.0 - blend
             };
 
-            draw_line(p0.x, p0.y, p1.x, p1.y, thickness, color);
-            y += step_cells;
+            let is_tile = (y % 16) == 0;
+            if is_tile {
+                alpha_mul = (alpha_mul * 1.15).min(1.0);
+            }
+
+            if alpha_mul > 0.001 {
+                let p0 = camera.cell_to_screen((start_x, y));
+                let p1 = camera.cell_to_screen((end_x, y));
+                let col = Color::new(base.r, base.g, base.b, base.a * alpha_mul);
+                draw_line(
+                    snap_px(p0.x), snap_px(p0.y),
+                    snap_px(p1.x), snap_px(p1.y),
+                    thickness, col
+                );
+            }
+            y += step;
         }
     }
 
-}
-
-fn grid_step_cells(cell_px: f32) -> i32 {
-    if cell_px >= 16.0 { 1 }
-    else if cell_px >= 8.0 { 2 }
-    else if cell_px >= 4.0 { 4 }
-    else if cell_px >= 2.0 { 8 }
-    else { 16 }
-}
-
-fn get_grid_appearance(step_cells: i32) -> (Color, f32) {
-    match step_cells {
-        1 => (Color::new(0.80, 0.85, 0.95, 0.30), 0.5),
-        2 => (Color::new(0.75, 0.80, 0.90, 0.35), 0.6),
-        4 => (Color::new(0.70, 0.75, 0.85, 0.40), 0.7),
-        8 => (Color::new(0.65, 0.70, 0.80, 0.45), 0.8),
-        _ => (Color::new(0.60, 0.65, 0.75, 0.50), 1.0),
-    }
 }

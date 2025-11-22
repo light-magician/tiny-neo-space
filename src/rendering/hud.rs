@@ -3,22 +3,26 @@ use crate::core::camera::Camera as AppCamera;
 
 pub struct Hud {
     fps: i32,
-    frame_time: f32,
+    accum_time: f32,
+    accum_frames: i32,
 }
 
 impl Hud {
     pub fn new() -> Self {
         Hud {
             fps: 0,
-            frame_time: 0.0,
+            accum_time: 0.0,
+            accum_frames: 0,
         }
     }
 
     pub fn update(&mut self, dt: f32) {
-        self.frame_time += dt;
-        if self.frame_time >= 1.0 {
-            self.fps = (1.0 / dt) as i32;
-            self.frame_time = 0.0;
+        self.accum_time += dt;
+        self.accum_frames += 1;
+        if self.accum_time >= 1.0 {
+            self.fps = (self.accum_frames as f32 / self.accum_time).round() as i32;
+            self.accum_time = 0.0;
+            self.accum_frames = 0;
         }
     }
 
