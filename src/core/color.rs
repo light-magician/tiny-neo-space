@@ -35,44 +35,48 @@ pub const GBA_PALETTE_ROWS: usize = 4;
 pub const GBA_PALETTE_COLS: usize = 8;
 
 pub const GBA_PALETTE: [[Rgba; GBA_PALETTE_COLS]; GBA_PALETTE_ROWS] = [
-    [
-        Rgba::rgb(15, 56, 15),    // dark green
-        Rgba::rgb(48, 98, 48),    // mid green
-        Rgba::rgb(139, 172, 15),  // yellow-green
-        Rgba::rgb(155, 188, 15),  // bright yellow-green
-        Rgba::rgb(62, 62, 116),   // dark blue
-        Rgba::rgb(92, 92, 168),   // medium blue
-        Rgba::rgb(123, 123, 213), // bright blue
-        Rgba::rgb(198, 198, 198), // light gray
-    ],
-    [
-        Rgba::rgb(247, 247, 247), // white
-        Rgba::rgb(255, 188, 188), // light pink
-        Rgba::rgb(255, 119, 119), // pink
-        Rgba::rgb(255, 68, 68),   // hot pink/red
-        Rgba::rgb(188, 63, 63),   // dark red
-        Rgba::rgb(120, 0, 0),     // darker red
-        Rgba::rgb(33, 30, 89),    // dark purple-blue
-        Rgba::rgb(47, 50, 167),   // indigo
-    ],
+    // Row 1: Grayscale gradient (black to white)
     [
         Rgba::rgb(0, 0, 0),       // black
         Rgba::rgb(34, 32, 52),    // very dark gray
-        Rgba::rgb(69, 40, 60),    // dark brown
-        Rgba::rgb(102, 57, 49),   // brown
-        Rgba::rgb(143, 86, 59),   // tan
-        Rgba::rgb(223, 113, 38),  // orange
-        Rgba::rgb(217, 160, 102), // light tan
-        Rgba::rgb(238, 195, 154), // peach
+        Rgba::rgb(69, 40, 60),    // dark gray
+        Rgba::rgb(102, 57, 49),   // medium dark gray
+        Rgba::rgb(128, 128, 128), // mid gray
+        Rgba::rgb(192, 192, 192), // light gray
+        Rgba::rgb(230, 230, 230), // very light gray
+        Rgba::rgb(255, 255, 255), // white
     ],
+    // Row 2: Reds and oranges gradient
     [
+        Rgba::rgb(120, 0, 0),     // dark red
+        Rgba::rgb(188, 63, 63),   // red
+        Rgba::rgb(255, 68, 68),   // bright red
+        Rgba::rgb(255, 119, 119), // light red
+        Rgba::rgb(255, 140, 0),   // dark orange
+        Rgba::rgb(255, 165, 0),   // orange
+        Rgba::rgb(255, 200, 100), // light orange
+        Rgba::rgb(255, 218, 185), // peach
+    ],
+    // Row 3: Yellows and greens gradient
+    [
+        Rgba::rgb(143, 86, 59),   // brown
+        Rgba::rgb(217, 160, 102), // tan
         Rgba::rgb(251, 242, 54),  // bright yellow
-        Rgba::rgb(153, 229, 80),  // light green
-        Rgba::rgb(106, 190, 48),  // medium green
-        Rgba::rgb(55, 148, 110),  // teal-green
-        Rgba::rgb(75, 105, 47),   // dark green
-        Rgba::rgb(82, 75, 36),    // olive
+        Rgba::rgb(155, 188, 15),  // yellow-green
+        Rgba::rgb(106, 190, 48),  // light green
+        Rgba::rgb(48, 98, 48),    // mid green
+        Rgba::rgb(15, 56, 15),    // dark green
         Rgba::rgb(50, 60, 57),    // dark teal
-        Rgba::rgb(63, 63, 116),   // steel blue
+    ],
+    // Row 4: Cyans, blues, and purples gradient
+    [
+        Rgba::rgb(55, 148, 110),  // teal
+        Rgba::rgb(0, 200, 200),   // cyan
+        Rgba::rgb(135, 206, 235), // sky blue
+        Rgba::rgb(92, 92, 168),   // medium blue
+        Rgba::rgb(62, 62, 116),   // dark blue
+        Rgba::rgb(75, 0, 130),    // indigo
+        Rgba::rgb(128, 0, 128),   // purple
+        Rgba::rgb(255, 105, 180), // pink
     ],
 ];

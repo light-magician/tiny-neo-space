@@ -20,46 +20,44 @@ pub async fn run() {
         // White background
         clear_background(WHITE);
 
-        // Draw buttons and check if we should interact with canvas
-        render_ui_buttons(&mut state);
+        // LAYER 1: Grid (behind everything except canvas)
+        grid_renderer.update_if_needed();
+        grid_renderer.draw(&state.camera);
 
-        // Render palette window and check if mouse is over UI
-        let over_ui = render_palette_window(&mut state);
+        // LAYER 2: Canvas
+        canvas_renderer.update_if_screen_resized();
+        canvas_renderer.update(&state.cells);
+        canvas_renderer.draw(&state.cells, &state.camera);
+
+        // LAYER 3: Selection overlay
+        draw_selection_overlay(&state);
+
+        // Check if mouse is over UI
+        let over_buttons = render_ui_buttons(&mut state);
+        let over_palette = render_palette_window(&mut state);
+        let over_ui = over_buttons || over_palette;
 
         // Handle zoom (scroll wheel) - only if not over UI
         if !over_ui {
             handle_zoom(&mut state);
         }
 
-        // Ensure grid is sized correctly
-        grid_renderer.update_if_needed();
-        grid_renderer.draw(&state.camera);
-
         // Handle user input (painting/erasing/panning) - only if not over UI
         if !over_ui {
             handle_input(&mut state, &mut canvas_renderer);
         }
 
-        // Update canvas renderer (only redraws dirty cells)
-        canvas_renderer.update_if_screen_resized();
-        canvas_renderer.update(&state.cells);
-
-        // Draw the canvas
-        canvas_renderer.draw(&state.cells, &state.camera);
-
-        // Draw selection overlay
-        draw_selection_overlay(&state);
-
-        // Draw cursor (in screen space) - only if not over UI
+        // LAYER 4: Cursor (only if not over UI)
         if !over_ui {
             let screen_mouse_pos = Vec2::from(mouse_position());
             draw_cursor_based_on_mode(&state.mode, &state.camera, screen_mouse_pos);
         }
 
-        // Draw selection action bar
+        // LAYER 5: Selection action bar (on top of everything)
         draw_selection_action_bar(&mut state);
 
-        hud.draw();
+        // LAYER 6: HUD (with camera info)
+        hud.draw(&state.camera);
 
         next_frame().await
     }

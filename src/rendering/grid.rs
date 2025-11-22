@@ -22,10 +22,10 @@ impl GridRenderer {
         let step_cells = grid_step_cells(cell_px);
 
         // Align start/end to grid step
-        let start_x = ((min_x.floor() as i32) / step_cells) * step_cells;
-        let start_y = ((min_y.floor() as i32) / step_cells) * step_cells;
-        let end_x = ((max_x.ceil() as i32) / step_cells + 1) * step_cells;
-        let end_y = ((max_y.ceil() as i32) / step_cells + 1) * step_cells;
+        let start_x = (min_x.floor() as i32 / step_cells) * step_cells;
+        let start_y = (min_y.floor() as i32 / step_cells) * step_cells;
+        let end_x = (max_x.ceil() as i32 / step_cells + 1) * step_cells;
+        let end_y = (max_y.ceil() as i32 / step_cells + 1) * step_cells;
 
         let (line_color, line_thickness) = get_grid_appearance(step_cells);
 
@@ -34,7 +34,17 @@ impl GridRenderer {
         while x <= end_x {
             let p0 = camera.cell_to_screen((x, start_y));
             let p1 = camera.cell_to_screen((x, end_y));
-            draw_line(p0.x, p0.y, p1.x, p1.y, line_thickness, line_color);
+
+            // Make tile boundaries (every 16 cells) slightly more prominent
+            let is_tile_boundary = x % 16 == 0;
+            let thickness = if is_tile_boundary && step_cells > 1 { line_thickness + 0.3 } else { line_thickness };
+            let color = if is_tile_boundary && step_cells > 1 {
+                Color::new(line_color.r * 0.8, line_color.g * 0.8, line_color.b * 0.8, line_color.a * 1.2)
+            } else {
+                line_color
+            };
+
+            draw_line(p0.x, p0.y, p1.x, p1.y, thickness, color);
             x += step_cells;
         }
 
@@ -43,44 +53,21 @@ impl GridRenderer {
         while y <= end_y {
             let p0 = camera.cell_to_screen((start_x, y));
             let p1 = camera.cell_to_screen((end_x, y));
-            draw_line(p0.x, p0.y, p1.x, p1.y, line_thickness, line_color);
+
+            // Make tile boundaries (every 16 cells) slightly more prominent
+            let is_tile_boundary = y % 16 == 0;
+            let thickness = if is_tile_boundary && step_cells > 1 { line_thickness + 0.3 } else { line_thickness };
+            let color = if is_tile_boundary && step_cells > 1 {
+                Color::new(line_color.r * 0.8, line_color.g * 0.8, line_color.b * 0.8, line_color.a * 1.2)
+            } else {
+                line_color
+            };
+
+            draw_line(p0.x, p0.y, p1.x, p1.y, thickness, color);
             y += step_cells;
         }
-
-        // Draw tile boundaries (every 16 cells) if zoomed out
-        if step_cells > 1 {
-            self.draw_tile_boundaries(camera, start_x, end_x, start_y, end_y);
-        }
     }
 
-    fn draw_tile_boundaries(&self, camera: &AppCamera, min_x: i32, max_x: i32, min_y: i32, max_y: i32) {
-        let tile_step = 16;
-        let tile_color = Color::new(0.50, 0.60, 0.80, 0.60);
-        let tile_thickness = 1.2;
-
-        let tile_start_x = (min_x / tile_step) * tile_step;
-        let tile_start_y = (min_y / tile_step) * tile_step;
-        let tile_end_x = ((max_x / tile_step) + 1) * tile_step;
-        let tile_end_y = ((max_y / tile_step) + 1) * tile_step;
-
-        // Vertical tile boundaries
-        let mut x = tile_start_x;
-        while x <= tile_end_x {
-            let p0 = camera.cell_to_screen((x, tile_start_y));
-            let p1 = camera.cell_to_screen((x, tile_end_y));
-            draw_line(p0.x, p0.y, p1.x, p1.y, tile_thickness, tile_color);
-            x += tile_step;
-        }
-
-        // Horizontal tile boundaries
-        let mut y = tile_start_y;
-        while y <= tile_end_y {
-            let p0 = camera.cell_to_screen((tile_start_x, y));
-            let p1 = camera.cell_to_screen((tile_end_x, y));
-            draw_line(p0.x, p0.y, p1.x, p1.y, tile_thickness, tile_color);
-            y += tile_step;
-        }
-    }
 }
 
 fn grid_step_cells(cell_px: f32) -> i32 {
