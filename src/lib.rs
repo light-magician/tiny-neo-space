@@ -2,6 +2,7 @@ mod core;
 mod state;
 mod rendering;
 mod input;
+mod ui;
 mod app;
 
 use wasm_bindgen::prelude::*;
