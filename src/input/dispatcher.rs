@@ -1,7 +1,6 @@
 use macroquad::prelude::*;
 use crate::state::{Mode, ApplicationState};
 use crate::rendering::CanvasRenderer;
-use crate::core::selection::SelectionKind;
 use super::tools::perform_drawing;
 use super::selection::handle_select_tool;
 
@@ -10,6 +9,23 @@ pub fn handle_input(
     state: &mut ApplicationState,
     canvas_renderer: &mut CanvasRenderer,
 ) {
+    // Clipboard operations (check before mode hotkeys to avoid conflicts)
+    if ctrl_or_cmd() && is_key_pressed(KeyCode::C) {
+        crate::input::clipboard::copy_selection(state);
+    }
+
+    if ctrl_or_cmd() && is_key_pressed(KeyCode::X) {
+        crate::input::clipboard::cut_selection(state, canvas_renderer);
+    }
+
+    if ctrl_or_cmd() && is_key_pressed(KeyCode::V) {
+        crate::input::clipboard::paste_clipboard_at_cursor(state, canvas_renderer);
+    }
+
+    if ctrl_or_cmd() && is_key_pressed(KeyCode::Z) {
+        undo_last(state, canvas_renderer);
+    }
+
     // Hotkeys for mode switching (check before mode dispatch)
     if is_key_pressed(KeyCode::B) {
         state.mode = Mode::Paint;
@@ -17,7 +33,7 @@ pub fn handle_input(
     if is_key_pressed(KeyCode::E) {
         state.mode = Mode::Erase;
     }
-    if is_key_pressed(KeyCode::V) {
+    if !ctrl_or_cmd() && is_key_pressed(KeyCode::V) {
         state.mode = Mode::Select;
     }
     if is_key_pressed(KeyCode::H) || is_key_pressed(KeyCode::Space) {
@@ -26,7 +42,7 @@ pub fn handle_input(
 
     // Delete selection hotkey
     if is_key_pressed(KeyCode::Delete) || is_key_pressed(KeyCode::Backspace) {
-        delete_selection(state, canvas_renderer);
+        crate::input::selection::delete_selection(state, canvas_renderer);
     }
 
     // Existing mode-based dispatch
@@ -37,25 +53,63 @@ pub fn handle_input(
         Mode::Paint => perform_drawing(state, &world_mouse_pos, false, canvas_renderer),
         Mode::Erase => perform_drawing(state, &world_mouse_pos, true, canvas_renderer),
         Mode::Pan => handle_pan_tool(state, screen_mouse_pos),
-        Mode::Select => handle_select_tool(state),
+        Mode::Select => handle_select_tool(state, canvas_renderer),
     }
 }
 
-/// Delete the current selection
-fn delete_selection(state: &mut ApplicationState, canvas_renderer: &mut CanvasRenderer) {
-    if let Some(sel) = &state.selection.current {
-        if let SelectionKind::Cells(coords) = &sel.kind {
-            // Remove all cells in the selection
-            for &(x, y) in coords.iter() {
-                if state.cells.remove(&(x, y)).is_some() {
-                    canvas_renderer.mark_dirty((x, y));
-                }
+/// Apply changes to cells and record them in history for undo
+pub fn apply_changes_and_record(
+    state: &mut ApplicationState,
+    canvas: &mut CanvasRenderer,
+    mut changes: Vec<crate::state::CellChange>,
+) {
+    // Fill in 'before' values if not set
+    for ch in changes.iter_mut() {
+        if ch.before.is_none() {
+            ch.before = state.cells.get(&ch.coord).cloned();
+        }
+    }
+
+    // Apply changes
+    for ch in changes.iter() {
+        match ch.after {
+            Some(cell) => {
+                state.cells.insert(ch.coord, cell);
+            }
+            None => {
+                state.cells.remove(&ch.coord);
             }
         }
-        // Clear the selection after deleting
-        state.selection.current = None;
-        state.selection.is_moving = false;
+        canvas.mark_dirty(ch.coord);
     }
+
+    // Record in history
+    state.history.push(crate::state::Command { changes });
+}
+
+/// Undo the last command in history
+pub fn undo_last(state: &mut ApplicationState, canvas: &mut CanvasRenderer) {
+    if let Some(cmd) = state.history.pop() {
+        for ch in cmd.changes {
+            match ch.before {
+                Some(cell) => {
+                    state.cells.insert(ch.coord, cell);
+                }
+                None => {
+                    state.cells.remove(&ch.coord);
+                }
+            }
+            canvas.mark_dirty(ch.coord);
+        }
+    }
+}
+
+/// Helper to check if Ctrl (Windows/Linux) or Cmd (Mac) is pressed
+fn ctrl_or_cmd() -> bool {
+    is_key_down(KeyCode::LeftControl)
+        || is_key_down(KeyCode::RightControl)
+        || is_key_down(KeyCode::LeftSuper)
+        || is_key_down(KeyCode::RightSuper)
 }
 
 /// Handle pan tool interaction

@@ -54,7 +54,7 @@ pub async fn run() {
         }
 
         // LAYER 5: Selection action bar (on top of everything)
-        draw_selection_action_bar(&mut state);
+        draw_selection_action_bar(&mut state, &mut canvas_renderer);
 
         // LAYER 6: HUD (with camera info)
         hud.draw(&state.camera);

@@ -1,5 +1,6 @@
 use crate::core::cell::CellGrid;
 use macroquad::prelude::RenderTarget;
+use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SelectionRect {
@@ -33,8 +34,14 @@ impl SelectionRect {
 }
 
 #[derive(Clone, Debug)]
+pub struct LiftedCell {
+    pub coord: (i32, i32),
+    pub cell: crate::core::cell::Cell,
+}
+
+#[derive(Clone, Debug)]
 pub enum SelectionKind {
-    Cells(Vec<(i32, i32)>),
+    Cells(HashSet<(i32, i32)>),
 }
 
 #[derive(Clone, Debug)]
@@ -68,6 +75,12 @@ pub struct SelectionState {
 
     /// Last mouse position in world space (for delta calculation)
     pub last_move_mouse: Option<(f32, f32)>,
+
+    /// Is the selection lifted from the canvas?
+    pub is_lifted: bool,
+
+    /// Cells that have been lifted (stored for undo/redo)
+    pub lifted_cells: Vec<LiftedCell>,
 }
 
 impl Default for SelectionState {
@@ -81,6 +94,8 @@ impl Default for SelectionState {
             move_offset_x: 0.0,
             move_offset_y: 0.0,
             last_move_mouse: None,
+            is_lifted: false,
+            lifted_cells: Vec::new(),
         }
     }
 }
@@ -113,7 +128,7 @@ impl SelectionState {
         if let (Some(start), Some(end)) = (self.drag_start, self.drag_end) {
             let rect = SelectionRect::from_points(start, end);
 
-            let selected_cells: Vec<(i32, i32)> = cells
+            let selected_cells: HashSet<(i32, i32)> = cells
                 .iter()
                 .filter_map(|(coord, cell)| {
                     if cell.is_filled && rect.contains(coord.0, coord.1) {
@@ -184,7 +199,8 @@ impl SelectionState {
         if let Some(sel) = &mut self.current {
             if let SelectionKind::Cells(coords) = &mut sel.kind {
                 // Update cell coordinates
-                *coords = coords.iter().map(|(x, y)| (x + offset_x, y + offset_y)).collect();
+                let updated: HashSet<(i32, i32)> = coords.iter().map(|(x, y)| (x + offset_x, y + offset_y)).collect();
+                *coords = updated;
 
                 // Update rect
                 sel.rect.min_x += offset_x;
@@ -198,4 +214,16 @@ impl SelectionState {
         self.move_offset_y = 0.0;
         Some((offset_x, offset_y))
     }
+}
+
+pub fn compute_bounding_rect(cells: &HashSet<(i32, i32)>) -> Option<SelectionRect> {
+    if cells.is_empty() { return None; }
+    let (mut min_x, mut min_y, mut max_x, mut max_y) = (i32::MAX, i32::MAX, i32::MIN, i32::MIN);
+    for &(x, y) in cells.iter() {
+        if x < min_x { min_x = x; }
+        if y < min_y { min_y = y; }
+        if x > max_x { max_x = x; }
+        if y > max_y { max_y = y; }
+    }
+    Some(SelectionRect { min_x, min_y, max_x, max_y })
 }

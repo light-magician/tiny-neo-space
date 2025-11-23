@@ -80,3 +80,23 @@ pub const GBA_PALETTE: [[Rgba; GBA_PALETTE_COLS]; GBA_PALETTE_ROWS] = [
         Rgba::rgb(255, 105, 180), // pink
     ],
 ];
+
+/// Convert GBA 5-bit color component (0-31) to 8-bit (0-255)
+pub fn gba5_to_u8(c5: u8) -> u8 {
+    ((c5 as u16 * 255) / 31) as u8
+}
+
+/// Generate extended GBA palette with 7x7x7 = 343 colors
+/// Uses evenly distributed steps through the GBA 15-bit color space
+pub fn generate_gba_extended_palette() -> Vec<Rgba> {
+    let steps: [u8; 7] = [0, 5, 10, 15, 20, 25, 31];
+    let mut colors = Vec::new();
+    for &g in &steps {
+        for &r in &steps {
+            for &b in &steps {
+                colors.push(Rgba::rgba(gba5_to_u8(r), gba5_to_u8(g), gba5_to_u8(b), 255));
+            }
+        }
+    }
+    colors
+}

@@ -2,8 +2,9 @@ use macroquad::prelude::*;
 use crate::state::ApplicationState;
 use crate::core::camera::Camera as AppCamera;
 use crate::input::delete_selection;
+use crate::rendering::CanvasRenderer;
 use crate::core::cell::CellGrid;
-use crate::core::selection::SelectionRect;
+use crate::core::selection::{SelectionRect, SelectionKind};
 
 pub fn draw_selection_overlay(state: &ApplicationState) {
     let camera = &state.camera;
@@ -17,50 +18,69 @@ pub fn draw_selection_overlay(state: &ApplicationState) {
 
     // Draw finalized selection
     if let Some(sel) = &state.selection.current {
-        let rect = &sel.rect;
-        let min_screen = camera.cell_to_screen((rect.min_x, rect.min_y));
-        let max_screen = camera.cell_to_screen((rect.max_x + 1, rect.max_y + 1));
-        let w = max_screen.x - min_screen.x;
-        let h = max_screen.y - min_screen.y;
-
-        // Fill
-        draw_rectangle(min_screen.x, min_screen.y, w, h, Color::new(0.3, 0.6, 1.0, 0.1));
-
-        // Outline
-        draw_rectangle_lines(min_screen.x, min_screen.y, w, h, 2.0,
-            Color::new(0.5, 0.8, 1.0, 0.8));
-
-        // During move: show preview offset
-        if state.selection.is_moving {
+        if let SelectionKind::Cells(cell_set) = &sel.kind {
+            let rect = &sel.rect;
             let pixel_scale = camera.pixel_scale();
-            let offset_px_x = state.selection.move_offset_x * pixel_scale;
-            let offset_px_y = state.selection.move_offset_y * pixel_scale;
 
-            // If we have a preview texture, draw it
-            if let Some(preview) = &sel.preview {
-                let width = (sel.rect.max_x - sel.rect.min_x + 1) as f32 * pixel_scale;
-                let height = (sel.rect.max_y - sel.rect.min_y + 1) as f32 * pixel_scale;
+            // Per-cell fill and outline (only if not moving, since cells are lifted during move)
+            if !state.selection.is_moving {
+                let fill_color = Color::new(0.3, 0.6, 1.0, 0.12);
+                let line_color = Color::new(0.5, 0.8, 1.0, 0.8);
 
-                // Draw the preview texture at the offset position
-                draw_texture_ex(
-                    &preview.texture,
-                    min_screen.x + offset_px_x,
-                    min_screen.y + offset_px_y,
-                    WHITE,
-                    DrawTextureParams {
-                        dest_size: Some(vec2(width, height)),
-                        ..Default::default()
-                    }
-                );
+                for &(x, y) in cell_set.iter() {
+                    let pos = camera.cell_to_screen((x, y));
+                    draw_rectangle(pos.x, pos.y, pixel_scale, pixel_scale, fill_color);
+                    draw_rectangle_lines(pos.x, pos.y, pixel_scale, pixel_scale, 1.0, line_color);
+                }
             }
 
-            // Still draw the yellow outline for the target position
+            // Overall bounding rectangle outline
+            let min_screen = camera.cell_to_screen((rect.min_x, rect.min_y));
+            let max_screen = camera.cell_to_screen((rect.max_x + 1, rect.max_y + 1));
+            let w = max_screen.x - min_screen.x;
+            let h = max_screen.y - min_screen.y;
+
             draw_rectangle_lines(
-                min_screen.x + offset_px_x,
-                min_screen.y + offset_px_y,
-                w, h, 1.0,
-                Color::new(1.0, 1.0, 0.3, 0.6), // Yellow preview
+                min_screen.x,
+                min_screen.y,
+                w,
+                h,
+                1.0,
+                Color::new(0.5, 0.8, 1.0, 0.5)
             );
+
+            // During move: draw preview texture at offset and yellow target outline
+            if state.selection.is_moving {
+                let offset_px_x = state.selection.move_offset_x * pixel_scale;
+                let offset_px_y = state.selection.move_offset_y * pixel_scale;
+
+                // If we have a preview texture, draw it at the offset position
+                if let Some(preview) = &sel.preview {
+                    let width = (rect.max_x - rect.min_x + 1) as f32 * pixel_scale;
+                    let height = (rect.max_y - rect.min_y + 1) as f32 * pixel_scale;
+
+                    draw_texture_ex(
+                        &preview.texture,
+                        min_screen.x + offset_px_x,
+                        min_screen.y + offset_px_y,
+                        WHITE,
+                        DrawTextureParams {
+                            dest_size: Some(vec2(width, height)),
+                            ..Default::default()
+                        }
+                    );
+                }
+
+                // Yellow target outline at prospective drop location
+                draw_rectangle_lines(
+                    min_screen.x + offset_px_x,
+                    min_screen.y + offset_px_y,
+                    w,
+                    h,
+                    1.0,
+                    Color::new(1.0, 1.0, 0.3, 0.6)
+                );
+            }
         }
     }
 }
@@ -89,7 +109,7 @@ fn draw_selection_rect(
 }
 
 /// Draw action bar for selection
-pub fn draw_selection_action_bar(state: &mut ApplicationState) {
+pub fn draw_selection_action_bar(state: &mut ApplicationState, canvas: &mut CanvasRenderer) {
     if let Some(sel) = &state.selection.current {
         let rect = &sel.rect;
         let camera = &state.camera;
@@ -115,7 +135,7 @@ pub fn draw_selection_action_bar(state: &mut ApplicationState) {
 
         // Delete button
         if draw_action_button("Delete", bar_x + 4.0, bar_y + 2.0, 70.0, 24.0) {
-            delete_selection(state);
+            delete_selection(state, canvas);
         }
     }
 }
@@ -143,9 +163,11 @@ fn draw_action_button(label: &str, x: f32, y: f32, w: f32, h: f32) -> bool {
 }
 
 /// Build a RenderTarget preview of the selected cells
+/// This creates a texture from the HashSet of selected cells
 pub fn build_selection_preview(
     cells: &CellGrid,
     rect: &SelectionRect,
+    cell_set: &std::collections::HashSet<(i32, i32)>,
 ) -> Option<RenderTarget> {
     let width = (rect.max_x - rect.min_x + 1) as u32;
     let height = (rect.max_y - rect.min_y + 1) as u32;
@@ -164,7 +186,7 @@ pub fn build_selection_preview(
     let camera = Camera2D {
         render_target: Some(rt.clone()),
         zoom: vec2(2.0 / (width as f32 * cell_size as f32),
-                   -2.0 / (height as f32 * cell_size as f32)),
+                   2.0 / (height as f32 * cell_size as f32)),
         target: vec2((width as f32 * cell_size as f32) / 2.0,
                      (height as f32 * cell_size as f32) / 2.0),
         ..Default::default()
@@ -173,15 +195,14 @@ pub fn build_selection_preview(
     set_camera(&camera);
     clear_background(Color::new(0.0, 0.0, 0.0, 0.0)); // Transparent
 
-    // Draw all cells in the selection
-    for x in rect.min_x..=rect.max_x {
-        for y in rect.min_y..=rect.max_y {
-            if let Some(cell) = cells.get(&(x, y)) {
-                if cell.is_filled {
-                    let local_x = (x - rect.min_x) as f32 * cell_size as f32;
-                    let local_y = (y - rect.min_y) as f32 * cell_size as f32;
-                    draw_rectangle(local_x, local_y, cell_size as f32, cell_size as f32, cell.color);
-                }
+    // Draw only cells that are in the HashSet
+    for &(x, y) in cell_set.iter() {
+        // Get cell data from grid (may not exist if lifted)
+        if let Some(cell) = cells.get(&(x, y)) {
+            if cell.is_filled {
+                let local_x = (x - rect.min_x) as f32 * cell_size as f32;
+                let local_y = (y - rect.min_y) as f32 * cell_size as f32;
+                draw_rectangle(local_x, local_y, cell_size as f32, cell_size as f32, cell.color);
             }
         }
     }
