@@ -13,7 +13,7 @@ use crate::core::cell::Cell;
 use std::collections::HashMap;
 
 /// Represents the current editing mode of the application
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum Mode {
     /// Paint mode - adds cells with the current color
     Paint,
@@ -111,6 +111,10 @@ pub struct ApplicationState {
     pub pan_drag_start_screen: Option<Vec2>,
     /// Pan tool state: drag start camera origin
     pub pan_drag_start_origin: Option<Vec2>,
+    /// Temporary pan mode activated by middle mouse button
+    pub temp_pan_active: bool,
+    /// Previous mode before temporary pan (to restore after middle mouse release)
+    pub temp_pan_previous_mode: Option<Mode>,
     /// Selection system state
     pub selection: SelectionState,
     /// Last painted cell coordinates for stroke interpolation
@@ -139,6 +143,8 @@ impl ApplicationState {
             palette_drag_offset: Vec2::ZERO,
             pan_drag_start_screen: None,
             pan_drag_start_origin: None,
+            temp_pan_active: false,
+            temp_pan_previous_mode: None,
             selection: SelectionState::new(),
             last_painted_cell: None,
             clipboard: Clipboard::empty(),

@@ -9,6 +9,27 @@ pub fn handle_input(
     state: &mut ApplicationState,
     canvas_renderer: &mut CanvasRenderer,
 ) {
+    // Handle temporary pan mode with middle mouse button
+    if is_mouse_button_pressed(MouseButton::Middle) {
+        if !state.temp_pan_active {
+            state.temp_pan_previous_mode = Some(state.mode.clone());
+            state.mode = Mode::Pan;
+            state.temp_pan_active = true;
+        }
+    }
+
+    if is_mouse_button_released(MouseButton::Middle) {
+        if state.temp_pan_active {
+            if let Some(previous_mode) = state.temp_pan_previous_mode.take() {
+                state.mode = previous_mode;
+            }
+            state.temp_pan_active = false;
+            // Clear pan drag state when exiting temp pan
+            state.pan_drag_start_screen = None;
+            state.pan_drag_start_origin = None;
+        }
+    }
+
     // Clipboard operations (check before mode hotkeys to avoid conflicts)
     if ctrl_or_cmd() && is_key_pressed(KeyCode::C) {
         crate::input::clipboard::copy_selection(state);
@@ -114,12 +135,19 @@ fn ctrl_or_cmd() -> bool {
 
 /// Handle pan tool interaction
 fn handle_pan_tool(state: &mut ApplicationState, screen_mouse: Vec2) {
-    if is_mouse_button_pressed(MouseButton::Left) {
+    // Use middle mouse button if in temp pan mode, otherwise left button
+    let pan_button = if state.temp_pan_active {
+        MouseButton::Middle
+    } else {
+        MouseButton::Left
+    };
+
+    if is_mouse_button_pressed(pan_button) {
         state.pan_drag_start_screen = Some(screen_mouse);
         state.pan_drag_start_origin = Some(state.camera.origin);
     }
 
-    if is_mouse_button_down(MouseButton::Left) {
+    if is_mouse_button_down(pan_button) {
         if let (Some(start_screen), Some(start_origin)) =
             (state.pan_drag_start_screen, state.pan_drag_start_origin)
         {
@@ -129,7 +157,7 @@ fn handle_pan_tool(state: &mut ApplicationState, screen_mouse: Vec2) {
         }
     }
 
-    if is_mouse_button_released(MouseButton::Left) {
+    if is_mouse_button_released(pan_button) {
         state.pan_drag_start_screen = None;
         state.pan_drag_start_origin = None;
     }
