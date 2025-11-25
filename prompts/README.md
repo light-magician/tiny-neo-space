@@ -9,7 +9,7 @@ the agent / agents must:
 - understand the architecture
 - understand how the new feature will fit into that
 - write a plan for that new feature implementation
-- have multi-agent system implement feature
+- have multi-agent system understand arch and implement feature
 
 using codex
 
@@ -24,4 +24,5 @@ using codex
 
 with claude
 
-    have it read `prompts/`
+    have it read `prompts/current_architecture.md`
+    then implement of `prompts/new_feautre.md`
