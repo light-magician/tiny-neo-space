@@ -1,0 +1,38 @@
+
+
+
+[groups]
+
+  groups are an abstraction over cells, where many cells can 
+  be selected and called a group we would make that by selecting
+  one or multiple cells, and hitting ctrl + g or by selecting them
+  and then hitting the group button that appears below selected cells.
+
+  Right now only a 'delete button' appears when cells are selected, 
+  we need to add a 'group' button on the popup tab that appears on selection.
+
+  When a group is formed, we need to create a 'gutter' on the left
+  side of the screen that serves as a list / file tree for the groups.
+
+  A group is essentially a a file with multiple cells in it 
+  we need to find a way to reference those cells when we are seeing 
+  that file tree. 
+
+  that file tree should have a list of features:
+  - when a group name is clicked in that file tree, that group 
+    appears selected on the canvas.
+  - if the name of a group is rapidly double clicked the user will 
+    be editing the name, and it will be saved when they hit "enter"
+  - if the user right clicks a group in the gutter, a popul with the options
+    "ungroup" and 'delete' will appear, allowing them to delete the group (ungroup)
+    or delete both the group and cells in the group. 
+
+  on the canvas:
+  - if a cell is selected when it is part of the group, the group should show selected 
+  - when a group is selected, the 'highlight effect' should show for the whole group 
+    the same way it shows for multiple selected tiles
+  - if a group is selected on the canvas, its name in the gutter on teh side should 
+    appear highlighted as well, until clicked off. 
+
+
+
