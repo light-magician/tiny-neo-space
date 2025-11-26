@@ -17,12 +17,12 @@ using codex
 
     it will write `prompts/current_architecture.md`
 
-    then have it read `features/your_new_feature`
-    and mention `features/plan_feature.md`
+    then have it read `prompts/features/your_new_feature`
+    and mention `prompts/plan_feature.md`
 
-    it will write the plan `new_feature.md`.
+    it will write the plan `prompts/new_feature.md`.
 
 with claude
 
     have it read `prompts/current_architecture.md`
-    then implement of `prompts/new_feautre.md`
+    then implement the plan in `prompts/new_feature.md`
