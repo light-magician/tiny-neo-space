@@ -1,7 +1,8 @@
 use macroquad::prelude::*;
 
 pub const BASE_CELL_PIXELS: f32 = 24.0;
-pub const MIN_ZOOM: f32 = 0.2;
+// At min zoom, 16×16 cells should match one default-zoom cell size
+pub const MIN_ZOOM: f32 = 1.0 / 16.0;
 pub const MAX_ZOOM: f32 = 4.0;
 
 #[derive(Copy, Clone, Debug)]
