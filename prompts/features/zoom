@@ -1,0 +1,12 @@
+[zoom levels and ratios]
+
+    right now, there is a default zoom level. That default zoom level 
+    shows cells at some length and width. We want to leave that exactly
+    as is. We need to edit the max zoomed out level such that 16x16 cells
+    has the same length and width at the max zoomed out amount that the 
+    single cell had. 
+
+    For example, at the default zoom, if a cell is 
+    length x and width y
+    at the max zoomed out level 
+    16x16 cells should be length x and length y.

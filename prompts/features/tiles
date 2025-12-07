@@ -1,0 +1,39 @@
+
+
+[tile]
+
+  simplest tile is 16x16 cells
+
+  [features]
+
+    [create tile] 
+
+      when selecting cells, there should be an option to "create tile".
+      when a tile is created, the square of the area selected should be 
+      saved and should appear in the "tile gutter
+
+      we should also be able to hit a "tile" button in our list of buttons.
+      that should pop up with a 16x16 cell area with a certain kind of boarder
+
+    [delete tile]
+
+    [save tile]
+
+    [animate tile]
+
+      a tile can be animated
+      an animated tile is just a list of tiles that play
+        on a loop over the cells that are associated with that tile. 
+        The cells that the tile is "over".
+      if we make an animated tile, we should be able to select multiple 
+        regular tiles, and order it in a "selected tile gutter"
+
+    [tile gutter]
+
+      there is a tile gutter on the right side of the screen 
+
+
+    [selected tile gutter]
+
+      
+      
